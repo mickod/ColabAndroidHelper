@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">ColabAndroidHelper</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="ip_address_label">IP Address</string>
+    <string name="state_label">State</string>
+    <string name="state_starting_server">Starting Server</string>
+    <string name="state_server_started">Server started</string>
+    <string name="state_receiving_file">Receiving file</string>
+    <string name="state_compressing_video">Compressing video</string>
+    <string name="state_sending_compressed_video">Sending Compressed Video</string>
+    <string name="state_connection_received">Connection received</string>
+
+</resources>
