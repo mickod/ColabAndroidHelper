@@ -7,10 +7,13 @@ import java.util.Locale;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+
+import com.amodtech.yaandroidffmpegwrapper.FfmpegJNIWrapper;
 
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -55,8 +58,8 @@ public class MainActivity extends ActionBarActivity {
         stateTextView = (TextView)findViewById(R.id.state);
         stateTextView.setText(R.string.state_starting_server);
         
-        //Start an asynch task HTTP server to wait for requests to compress videos
-        //Based on approach outlined at link below:
+        //Start an asynch task to wait for requests over the socket to compress videos
+        //Based on modified version of approach outlined:
         //http://android-er.blogspot.hk/2014/08/bi-directional-communication-between.html
         Thread socketServerThread = new Thread(new SocketServerThread());
         socketServerThread.start();    
@@ -104,14 +107,15 @@ public class MainActivity extends ActionBarActivity {
     	@Override
     	public void run() {
     		Socket socket = null;
-    		DataInputStream dataInputStream = null;
-    		FileOutputStream videoToCompressOutputStream = null;
-    		BufferedOutputStream videoToCompressBufferedOutputStream = null;
+    		DataInputStream inputFileDIS = null;
+    		FileOutputStream videoToCompressFOS= null;
+    		BufferedOutputStream videoToCompressBOS = null;
     		FileInputStream compressedVideofileIS = null;
     		BufferedInputStream compressedVideofileBIS = null;
-		    BufferedOutputStream compressedVideofileOS = null;
-		    File compressedVideoFile = null;
+		    BufferedOutputStream socketBOS = null;
+		    DataOutputStream socketDOS = null;
 		    File videoFileToCompress = null;
+		    File compressedVideoFile = null;
 
     		try {
     			serverSocket = new ServerSocket(SocketServerPORT);
@@ -134,11 +138,12 @@ public class MainActivity extends ActionBarActivity {
         	    	    	stateTextView.setText(R.string.state_connection_received);
     	    			}
         			});
-    				dataInputStream = new DataInputStream(socket.getInputStream());
+    				inputFileDIS = new DataInputStream(socket.getInputStream());
 					int bufferSize = socket.getReceiveBufferSize();
-					Log.d("MainActivity SocketServerThread Run","buffersize: " + bufferSize);
-					videoToCompressOutputStream = null;
-				    videoToCompressBufferedOutputStream = null;
+					Log.d("MainActivity SocketServerThread Run","Receive buffer size: " + bufferSize);
+					videoToCompressFOS = null;
+				    videoToCompressBOS = null;
+				    
 					try {
 						//Create the file and the steams to enable us write to it. First check if a temp video file already exists 
 						//and if so delete it - we don't want more than one at any given time.
@@ -158,8 +163,8 @@ public class MainActivity extends ActionBarActivity {
 							Log.d("MainActivity SocketServerThread Run","videoFileToCompress: file not created");
 							return;
 						}
-						videoToCompressOutputStream = new FileOutputStream(videoFileToCompress);
-						videoToCompressBufferedOutputStream = new BufferedOutputStream(videoToCompressOutputStream);
+						videoToCompressFOS = new FileOutputStream(videoFileToCompress);
+						videoToCompressBOS = new BufferedOutputStream(videoToCompressFOS);
 					} catch (FileNotFoundException e) {
 						Log.d("MainActivity SocketServerThread Run","Fileoutputstream: file not found exception");
 						e.printStackTrace();
@@ -177,18 +182,18 @@ public class MainActivity extends ActionBarActivity {
 				    byte[] bytes = new byte[bufferSize];
 				    int thisReadCount = 0;
 				    boolean reportCount = false;
-				    thisReadCount = dataInputStream.read(bytes);
-				    int fileSize = bytes[1];
-				    videoToCompressBufferedOutputStream.write(bytes, 1, thisReadCount);
+				    thisReadCount = inputFileDIS.read(bytes);
+				    long fileSize = inputFileDIS.readLong();
+				    videoToCompressBOS.write(bytes, 1, thisReadCount);
 				    
 				    //Now read in the rest of the file up to the final byte indicated by the size
-				    int totalCount = thisReadCount - 1;
-				    while (totalCount < fileSize && (thisReadCount = dataInputStream.read(bytes)) != -1) {
+				    long totalCount = thisReadCount - 1;
+				    while (totalCount < fileSize && (thisReadCount = inputFileDIS.read(bytes)) != -1) {
 				    	totalCount += thisReadCount;
 				    	if (reportCount) {
 				    		Log.d("MainActivity SocketServerThread Run","Count now is: " + thisReadCount);
 				    	}
-				    	videoToCompressBufferedOutputStream.write(bytes, 0, thisReadCount);
+				    	videoToCompressBOS.write(bytes, 0, thisReadCount);
 				    	if (thisReadCount < 1000) {
 				    		Log.d("MainActivity SocketServerThread Run","Count down: " + thisReadCount);
 				    		reportCount =true;
@@ -196,9 +201,9 @@ public class MainActivity extends ActionBarActivity {
 				    }
 				    Log.d("MainActivity SocketServerThread Run","video file received");
 
-				    videoToCompressBufferedOutputStream.flush();
-				    videoToCompressBufferedOutputStream.close();
-				    dataInputStream.close();			    
+				    videoToCompressBOS.flush();
+				    videoToCompressBOS.close();
+				    inputFileDIS.close();			    
 
 		    	    //Now compress the file
 	    			MainActivity.this.runOnUiThread(new Runnable() {
@@ -207,30 +212,36 @@ public class MainActivity extends ActionBarActivity {
     	    	    		stateTextView.setText(R.string.state_compressing_video);
     	    			}
 	        		});
+
 				    compressedVideoFile = new File(Environment.getExternalStorageDirectory(), "TempCompressedVideo");
 			    	String argv[] = {"ffmpeg", "-i", Environment.getExternalStorageDirectory() + "TempVideoToCompress", "-strict", "experimental", "-acodec", "aac", Environment.getExternalStorageDirectory() + "/TempCompressedVideo.mp4"};
 			    	Log.d("VideoCompressionTask","Calling ffmpegWrapper");
-			    	//int ffmpegWrapperreturnCode = FfmpegJNIWrapper.ffmpegWrapper(argv);
-			    	//Log.d("VideoCompressionTask","ffmpegWrapperreturnCode: " + ffmpegWrapperreturnCode);
+			    	int ffmpegWrapperreturnCode = FfmpegJNIWrapper.ffmpegWrapper(argv);
+			    	Log.d("VideoCompressionTask","ffmpegWrapperreturnCode: " + ffmpegWrapperreturnCode);
                     
-                    //Send the compressed file back in the HTTP response
+                    //Send the compressed file back over the socket
 	    			MainActivity.this.runOnUiThread(new Runnable() {
 	    				@Override
     	    			public void run() {
     	    	    		stateTextView.setText(R.string.state_sending_compressed_video);
     	    			}
         			});
+	    			//First send the file size
 				    compressedVideofileIS = new FileInputStream(compressedVideoFile);
 				    compressedVideofileBIS = new BufferedInputStream(compressedVideofileIS);
-				    compressedVideofileOS = new BufferedOutputStream(socket.getOutputStream());
-
+				    socketBOS = new BufferedOutputStream(socket.getOutputStream());
+				    socketDOS = new DataOutputStream(socketBOS);
+				    socketDOS.writeLong(compressedVideoFile.length());
+				    //Now send all the bytes in the file
 				    thisReadCount = 0;
 				    while ((thisReadCount = compressedVideofileBIS.read(bytes)) > 0) {
-				    	compressedVideofileOS.write(bytes, 0, thisReadCount);
+				    	socketDOS.write(bytes, 0, thisReadCount);
 				    }
 
-				    compressedVideofileOS.flush();
-				    compressedVideofileOS.close();
+				    //Tidy up streams
+				    socketDOS.flush();
+				    socketDOS.close();
+				    socketBOS.close();
 				    compressedVideofileIS.close();
 				    compressedVideofileBIS.close();
 		    	    
@@ -262,24 +273,24 @@ public class MainActivity extends ActionBarActivity {
 	    			   socket.close();
 	    		   }
 	
-	    		   if (dataInputStream != null) {
-	    			   dataInputStream.close();
+	    		   if (inputFileDIS != null) {
+	    			   inputFileDIS.close();
 	    		   }
 	
-	    		   if (videoToCompressOutputStream != null) {
-	    			   videoToCompressOutputStream.close();
+	    		   if (videoToCompressFOS != null) {
+	    			   videoToCompressFOS.close();
 	    		   }
 	    		   
-	    		   if (videoToCompressBufferedOutputStream != null) {
-	  				   videoToCompressBufferedOutputStream.close();
+	    		   if (videoToCompressBOS != null) {
+	  				   videoToCompressBOS.close();
 	    		   }
 	    	
 	    		   if (compressedVideofileIS != null) {
 	    			   compressedVideofileIS.close();
 	    		   } 
 	    		   
-	    		   if (compressedVideofileOS != null) {
-	    			   compressedVideofileOS.close();
+	    		   if (socketBOS != null) {
+	    			   socketBOS.close();
 	    		   } 
 	    		   
 	    		   if (compressedVideofileBIS != null) {
