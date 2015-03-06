@@ -354,8 +354,10 @@ int string state_connection_received 0x7f050017
 int string state_label 0x7f050011
 int string state_receiving_file 0x7f050014
 int string state_sending_compressed_video 0x7f050016
+int string state_sent_compressed_file 0x7f050018
 int string state_server_started 0x7f050013
 int string state_starting_server 0x7f050012
+int string state_waiting_for_connection 0x7f050019
 int style AppBaseTheme 0x7f060000
 int style AppTheme 0x7f060001
 int style TextAppearance_AppCompat_Base_CompactMenu_Dialog 0x7f060065

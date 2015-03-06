@@ -1256,8 +1256,10 @@ containing a value of this type.
         public static final int state_label=0x7f050011;
         public static final int state_receiving_file=0x7f050014;
         public static final int state_sending_compressed_video=0x7f050016;
+        public static final int state_sent_compressed_file=0x7f050018;
         public static final int state_server_started=0x7f050013;
         public static final int state_starting_server=0x7f050012;
+        public static final int state_waiting_for_connection=0x7f050019;
     }
     public static final class style {
         /** 

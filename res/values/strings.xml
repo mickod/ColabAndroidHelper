@@ -12,5 +12,7 @@
     <string name="state_compressing_video">Compressing video</string>
     <string name="state_sending_compressed_video">Sending Compressed Video</string>
     <string name="state_connection_received">Connection received</string>
+    <string name="state_sent_compressed_file">Compressed video returned</string>
+    <string name="state_waiting_for_connection">Waiting for connection</string>
 
 </resources>
