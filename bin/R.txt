@@ -271,7 +271,7 @@ int id ip_info_area 0x7f07003c
 int id listMode 0x7f070001
 int id list_item 0x7f070029
 int id log_area 0x7f070042
-int id log_scroll_view 0x7f070043
+int id log_scroll_text_view 0x7f070043
 int id middle 0x7f070012
 int id never 0x7f070009
 int id none 0x7f070010

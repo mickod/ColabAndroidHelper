@@ -67,6 +67,27 @@
 	</LinearLayout>
 	
     <!-- log view -->
+    <ScrollView
+        android:id="@+id/log_area"
+        android:layout_below="@+id/state_info_area"
+        android:layout_width="match_parent"
+        android:background="@android:color/black" 
+        android:layout_height="match_parent"
+	    android:fillViewport="true">
+	    <TextView
+	        android:id="@+id/log_scroll_text_view"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_margin="5dp"
+	        android:textStyle="bold" 
+	        android:maxLines = "10000"
+			android:scrollbars = "vertical"
+			android:layout_gravity="bottom"
+	        android:textSize="18sp"/>
+	</ScrollView>
+    
+    
+    <!--  
    	<LinearLayout
         android:id="@+id/log_area"
         android:orientation="horizontal"
@@ -75,14 +96,17 @@
         android:background="@android:color/black" 
         android:layout_height="match_parent" >
     
-		<ScrollView
-	        android:id="@+id/log_scroll_view"
+		<TextView
+	        android:id="@+id/log_scroll_text_view"
 	        android:layout_width="wrap_content"
 			android:layout_weight="1"
 	        android:layout_height="wrap_content"
 	        android:layout_margin="5dp"
 	        android:textStyle="bold" 
+	        android:maxLines = "10000"
+			android:scrollbars = "vertical"
+			android:layout_gravity="bottom"
 	        android:textSize="18sp"/>
-	</LinearLayout>
+	</LinearLayout>-->
 
 </RelativeLayout>

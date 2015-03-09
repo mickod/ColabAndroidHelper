@@ -16,6 +16,7 @@ import java.io.FileOutputStream;
 import com.amodtech.yaandroidffmpegwrapper.FfmpegJNIWrapper;
 
 import android.support.v7.app.ActionBarActivity;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.content.Context;
 import android.net.wifi.WifiInfo;
@@ -24,6 +25,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 
@@ -57,6 +59,10 @@ public class MainActivity extends ActionBarActivity {
         //Display the state as starting server
         stateTextView = (TextView)findViewById(R.id.state);
         stateTextView.setText(R.string.state_starting_server);
+        
+        //Make the log view area scrollable
+        TextView logView = (TextView)findViewById(R.id.log_scroll_text_view);
+        logView.setMovementMethod(new ScrollingMovementMethod());
         
         //Start an asynch task to wait for requests over the socket to compress videos
         //Based on modified version of approach outlined:
@@ -133,6 +139,7 @@ public class MainActivity extends ActionBarActivity {
 		    				stateTextView.setText(R.string.state_server_started);
 		    			}
 	    			});
+	    			logToScreen("State: " + getResources().getString(R.string.state_server_started));
 	
 	    			while (true) {
 	    				//Accept connections from clients sending videos to compress
@@ -143,6 +150,7 @@ public class MainActivity extends ActionBarActivity {
 	        	    	    	stateTextView.setText(R.string.state_waiting_for_connection);
 	    	    			}
 	        			});
+	        			logToScreen("State: " + getResources().getString(R.string.state_waiting_for_connection));
 	    				socket = serverSocket.accept();
 	 
 	    				//Handle the message - read the data in and store the file locally first
@@ -152,6 +160,7 @@ public class MainActivity extends ActionBarActivity {
 	        	    	    	stateTextView.setText(R.string.state_connection_received);
 	    	    			}
 	        			});
+	        			logToScreen("State: " + getResources().getString(R.string.state_connection_received));
 	    				inputFileDIS = new DataInputStream(socket.getInputStream());
 						int bufferSize = socket.getReceiveBufferSize();
 						Log.d("MainActivity SocketServerThread Run","Receive buffer size: " + bufferSize);
@@ -190,6 +199,7 @@ public class MainActivity extends ActionBarActivity {
 	    	    	    		stateTextView.setText(R.string.state_receiving_file);
 	    	    			}
 	        			});
+		    			logToScreen("State: " + getResources().getString(R.string.state_receiving_file));
 					    		
 					    //The first part of the message should be the length of the file being transfered - read it first and
 					    //then write from the second byte onwards to the buffer
@@ -204,7 +214,8 @@ public class MainActivity extends ActionBarActivity {
 					    while (totalCount < fileSize && (thisReadCount = inputFileDIS.read(bytes)) != -1) {
 					    	totalCount += thisReadCount;
 					    	if (reportCount) {
-					    		Log.d("MainActivity SocketServerThread Run","Count this read is: " + thisReadCount);
+					    		Log.d("MainActivity SocketServerThread Run","Total Bytes read: " + totalCount);
+					    		logToScreen("Total Bytes read: " + totalCount);
 					    	}
 					    	videoToCompressBOS.write(bytes, 0, thisReadCount);
 					    }
@@ -227,6 +238,7 @@ public class MainActivity extends ActionBarActivity {
 	    	    	    		stateTextView.setText(R.string.state_compressing_video);
 	    	    			}
 		        		});
+		    			logToScreen("State: " + getResources().getString(R.string.state_compressing_video));
 	
 					    compressedVideoFile = new File(Environment.getExternalStorageDirectory(), "TempCompressedVideo.mp4");
 						if(compressedVideoFile.exists()) {
@@ -251,6 +263,8 @@ public class MainActivity extends ActionBarActivity {
 	    	    	    		stateTextView.setText(R.string.state_sending_compressed_video);
 	    	    			}
 	        			});
+		    			logToScreen("State: " + getResources().getString(R.string.state_sending_compressed_video));
+		    			
 		    			//First send the file size
 		    			Log.d("MainActivity SocketServerThread Run","Sending compessed file size back");
 					    compressedVideofileIS = new FileInputStream(compressedVideoFile);
@@ -267,6 +281,7 @@ public class MainActivity extends ActionBarActivity {
 	
 					    //Tidy up streams
 					    Log.d("MainActivity SocketServerThread Run","Tidying up");
+					    logToScreen("Tidying up");
 					    socketDOS.flush();
 					    socketDOS.close();
 					    socketBOS.close();
@@ -279,6 +294,7 @@ public class MainActivity extends ActionBarActivity {
 			    				stateTextView.setText(R.string.state_sent_compressed_file);
 			    			}
 		    			});
+		    			logToScreen("State: " + getResources().getString(R.string.state_sent_compressed_file));
 			    	    
 			    	    //Delete temporary files and close socket
 					    if (compressedVideoFile.delete() != true) {
@@ -338,5 +354,19 @@ public class MainActivity extends ActionBarActivity {
 	    	   }
 	    	}  
 	    }
+    }
+    
+    private void logToScreen(final String logText) {
+    	//Method to log to the scrollable text view on the screen
+    	
+		MainActivity.this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+		        //Display the state as starting server
+		        TextView logView = (TextView)findViewById(R.id.log_scroll_text_view);
+		        logView.append(">>> " + logText + "\n");
+			}
+		});
+    	
     }
 }

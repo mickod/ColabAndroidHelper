@@ -1116,7 +1116,7 @@ containing a value of this type.
         public static final int listMode=0x7f070001;
         public static final int list_item=0x7f070029;
         public static final int log_area=0x7f070042;
-        public static final int log_scroll_view=0x7f070043;
+        public static final int log_scroll_text_view=0x7f070043;
         public static final int middle=0x7f070012;
         public static final int never=0x7f070009;
         public static final int none=0x7f070010;
