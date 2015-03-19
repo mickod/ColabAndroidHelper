@@ -19,12 +19,14 @@ import android.support.v7.app.ActionBarActivity;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.content.Context;
+import android.graphics.drawable.AnimationDrawable;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -63,6 +65,10 @@ public class MainActivity extends ActionBarActivity {
         //Make the log view area scrollable
         TextView logView = (TextView)findViewById(R.id.log_scroll_text_view);
         logView.setMovementMethod(new ScrollingMovementMethod());
+        
+        //Set the status box to green
+        ImageView statusBox = (ImageView) findViewById(R.id.status_box);
+        statusBox.setBackgroundResource(R.drawable.green_box);
         
         //Start an asynch task to wait for requests over the socket to compress videos
         //Based on modified version of approach outlined:
@@ -139,7 +145,7 @@ public class MainActivity extends ActionBarActivity {
 		    				stateTextView.setText(R.string.state_server_started);
 		    			}
 	    			});
-	    			logToScreen("State: " + getResources().getString(R.string.state_server_started));
+	    			loglnToScreen("State: " + getResources().getString(R.string.state_server_started));
 	
 	    			while (true) {
 	    				//Accept connections from clients sending videos to compress
@@ -148,9 +154,13 @@ public class MainActivity extends ActionBarActivity {
 	        	    	    @Override
 	    	    			public void run() {
 	        	    	    	stateTextView.setText(R.string.state_waiting_for_connection);
+	        	    	    	
+	        	    	    	//Set the status box to solid green
+	        	    	    	ImageView statusBox = (ImageView) findViewById(R.id.status_box);
+	        	    	        statusBox.setBackgroundResource(R.drawable.green_box);	
 	    	    			}
 	        			});
-	        			logToScreen("State: " + getResources().getString(R.string.state_waiting_for_connection));
+	        			loglnToScreen("State: " + getResources().getString(R.string.state_waiting_for_connection));
 	    				socket = serverSocket.accept();
 	 
 	    				//Handle the message - read the data in and store the file locally first
@@ -160,7 +170,7 @@ public class MainActivity extends ActionBarActivity {
 	        	    	    	stateTextView.setText(R.string.state_connection_received);
 	    	    			}
 	        			});
-	        			logToScreen("State: " + getResources().getString(R.string.state_connection_received));
+	        			loglnToScreen("State: " + getResources().getString(R.string.state_connection_received));
 	    				inputFileDIS = new DataInputStream(socket.getInputStream());
 						int bufferSize = socket.getReceiveBufferSize();
 						Log.d("MainActivity SocketServerThread Run","Receive buffer size: " + bufferSize);
@@ -197,9 +207,16 @@ public class MainActivity extends ActionBarActivity {
 		    				@Override
 	    	    			public void run() {
 	    	    	    		stateTextView.setText(R.string.state_receiving_file);
+	    	    	    		
+	        	    	    	//Set the status box to blinking yellow
+	        	    	    	ImageView statusBox = (ImageView) findViewById(R.id.status_box);
+	        	    	        statusBox.setBackgroundResource(R.drawable.status_box_yellow_animation);
+	        	    	        AnimationDrawable frameAnimation = (AnimationDrawable) statusBox
+	        	    	                .getBackground();
+	        	    	        frameAnimation.start();
 	    	    			}
 	        			});
-		    			logToScreen("State: " + getResources().getString(R.string.state_receiving_file));
+		    			logToScreen(">>> State: " + getResources().getString(R.string.state_receiving_file) + " ");
 					    		
 					    //The first part of the message should be the length of the file being transfered - read it first and
 					    //then write from the second byte onwards to the buffer
@@ -215,7 +232,7 @@ public class MainActivity extends ActionBarActivity {
 					    	totalCount += thisReadCount;
 					    	if (reportCount) {
 					    		Log.d("MainActivity SocketServerThread Run","Total Bytes read: " + totalCount);
-					    		logToScreen("Total Bytes read: " + totalCount);
+					    		logToScreen(".");
 					    	}
 					    	videoToCompressBOS.write(bytes, 0, thisReadCount);
 					    }
@@ -226,6 +243,8 @@ public class MainActivity extends ActionBarActivity {
 					    Log.d("MainActivity SocketServerThread Run","video file received");
 					    Log.d("MainActivity SocketServerThread Run","totalCount: " + totalCount);
 					    Log.d("MainActivity SocketServerThread Run","thisReadCount: " + thisReadCount);
+					    logToScreen("\n");
+					    loglnToScreen("Total Bytes read: " + totalCount);
 	
 					    videoToCompressBOS.flush();
 					    videoToCompressBOS.close();
@@ -236,9 +255,16 @@ public class MainActivity extends ActionBarActivity {
 		    	    	    @Override
 	    	    			public void run() {
 	    	    	    		stateTextView.setText(R.string.state_compressing_video);
+	    	    	    		
+	        	    	    	//Set the status box to blinking orange
+	        	    	    	ImageView statusBox = (ImageView) findViewById(R.id.status_box);
+	        	    	        statusBox.setBackgroundResource(R.drawable.status_box_orange_animation);
+	        	    	        AnimationDrawable frameAnimation = (AnimationDrawable) statusBox
+	        	    	                .getBackground();
+	        	    	        frameAnimation.start();
 	    	    			}
 		        		});
-		    			logToScreen("State: " + getResources().getString(R.string.state_compressing_video));
+		    			loglnToScreen("State: " + getResources().getString(R.string.state_compressing_video));
 	
 					    compressedVideoFile = new File(Environment.getExternalStorageDirectory(), "TempCompressedVideo.mp4");
 						if(compressedVideoFile.exists()) {
@@ -261,9 +287,16 @@ public class MainActivity extends ActionBarActivity {
 		    				@Override
 	    	    			public void run() {
 	    	    	    		stateTextView.setText(R.string.state_sending_compressed_video);
+	    	    	    		
+	        	    	    	//Set the status box to blinking green
+	        	    	    	ImageView statusBox = (ImageView) findViewById(R.id.status_box);
+	        	    	        statusBox.setBackgroundResource(R.drawable.status_box_green_animation);
+	        	    	        AnimationDrawable frameAnimation = (AnimationDrawable) statusBox
+	        	    	                .getBackground();
+	        	    	        frameAnimation.start();
 	    	    			}
 	        			});
-		    			logToScreen("State: " + getResources().getString(R.string.state_sending_compressed_video));
+		    			loglnToScreen("State: " + getResources().getString(R.string.state_sending_compressed_video));
 		    			
 		    			//First send the file size
 		    			Log.d("MainActivity SocketServerThread Run","Sending compessed file size back");
@@ -281,7 +314,7 @@ public class MainActivity extends ActionBarActivity {
 	
 					    //Tidy up streams
 					    Log.d("MainActivity SocketServerThread Run","Tidying up");
-					    logToScreen("Tidying up");
+					    loglnToScreen("Tidying up");
 					    socketDOS.flush();
 					    socketDOS.close();
 					    socketBOS.close();
@@ -294,7 +327,7 @@ public class MainActivity extends ActionBarActivity {
 			    				stateTextView.setText(R.string.state_sent_compressed_file);
 			    			}
 		    			});
-		    			logToScreen("State: " + getResources().getString(R.string.state_sent_compressed_file));
+		    			loglnToScreen("State: " + getResources().getString(R.string.state_sent_compressed_file));
 			    	    
 			    	    //Delete temporary files and close socket
 					    if (compressedVideoFile.delete() != true) {
@@ -357,7 +390,20 @@ public class MainActivity extends ActionBarActivity {
     }
     
     private void logToScreen(final String logText) {
-    	//Method to log to the scrollable text view on the screen
+    	//Method to log to the scrollable text view on the screen with no newline
+    	
+		MainActivity.this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+		        //Display the state as starting server
+		        TextView logView = (TextView)findViewById(R.id.log_scroll_text_view);
+		        logView.append(logText);
+			}
+		});
+    }
+    
+    private void loglnToScreen(final String logText) {
+    	//Method to log to the scrollable text view on the screen wiht newline
     	
 		MainActivity.this.runOnUiThread(new Runnable() {
 			@Override
