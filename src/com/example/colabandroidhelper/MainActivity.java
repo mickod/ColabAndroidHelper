@@ -24,10 +24,11 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.PowerManager;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 import android.widget.ImageView;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 
@@ -76,6 +77,9 @@ public class MainActivity extends ActionBarActivity {
         Thread socketServerThread = new Thread(new SocketServerThread(this.getBaseContext()));
         socketServerThread.start(); 
         Log.d("MainActivity onCreate","Server started");
+        
+        //Keep the screen on
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override
