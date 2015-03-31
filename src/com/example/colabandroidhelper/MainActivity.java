@@ -3,6 +3,7 @@ package com.example.colabandroidhelper;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.text.DecimalFormat;
 import java.util.Locale;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -12,7 +13,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-
 import com.amodtech.yaandroidffmpegwrapper.FfmpegJNIWrapper;
 
 import android.support.v7.app.ActionBarActivity;
@@ -22,6 +22,7 @@ import android.content.Context;
 import android.graphics.drawable.AnimationDrawable;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
@@ -32,10 +33,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements CompressingProgressTaskListener {
 	
 	ServerSocket serverSocket;
 	TextView stateTextView;
+	private CompressingFileSizeProgressTask compressingProgressTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -161,7 +163,11 @@ public class MainActivity extends ActionBarActivity {
 	        	    	    	
 	        	    	    	//Set the status box to solid green
 	        	    	    	ImageView statusBox = (ImageView) findViewById(R.id.status_box);
-	        	    	        statusBox.setBackgroundResource(R.drawable.green_box);	
+	        	    	        statusBox.setBackgroundResource(R.drawable.green_box);
+	        	    	        
+	        	    	        //Set the progress message to blank
+	        	    	    	TextView progressMessageTextView = (TextView) (TextView)findViewById(R.id.progress_textview);
+	        	    	    	progressMessageTextView.setText("");
 	    	    			}
 	        			});
 	        			loglnToScreen("State: " + getResources().getString(R.string.state_waiting_for_connection));
@@ -248,13 +254,15 @@ public class MainActivity extends ActionBarActivity {
 					    Log.d("MainActivity SocketServerThread Run","totalCount: " + totalCount);
 					    Log.d("MainActivity SocketServerThread Run","thisReadCount: " + thisReadCount);
 					    logToScreen("\n");
-					    loglnToScreen("Total Bytes read: " + totalCount);
+					    String fileSizeString = new DecimalFormat("0.00").format(totalCount/1000000.0);
+					    loglnToScreen("Total Bytes read: " + totalCount + " (" + fileSizeString + "MB)");
 	
 					    videoToCompressBOS.flush();
 					    videoToCompressBOS.close();
 					    //inputFileDIS.close();			    
 	
 			    	    //Now compress the file
+					    //Update the status display
 		    			MainActivity.this.runOnUiThread(new Runnable() {
 		    	    	    @Override
 	    	    			public void run() {
@@ -270,6 +278,7 @@ public class MainActivity extends ActionBarActivity {
 		        		});
 		    			loglnToScreen("State: " + getResources().getString(R.string.state_compressing_video));
 	
+		    			//Create the file for the compressed video
 					    compressedVideoFile = new File(Environment.getExternalStorageDirectory(), "TempCompressedVideo.mp4");
 						if(compressedVideoFile.exists()) {
 							//Delete the file if it already exists (from a previous run)
@@ -280,13 +289,36 @@ public class MainActivity extends ActionBarActivity {
 								return;
 							}
 						}
+						
+						final String compVidFilePath = compressedVideoFile.getAbsolutePath();
+						//Start the progress monitor task and set the main activity as the listener
+		    			MainActivity.this.runOnUiThread(new Runnable() {
+		    	    	    @Override
+	    	    			public void run() {
+		    	    	    	compressingProgressTask = new CompressingFileSizeProgressTask(MainActivity.this);
+		    	    	    	
+						    	//To allow multiple AsynchTasks execute in parallel the following 'executeonExecutor' call is required. It needs to be
+						    	//used with caution to avoid the usual synchronization issues and also to avoid too many threads being created
+						    	compressingProgressTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, compVidFilePath);
+	    	    			}
+		        		});
+
 				    	String argv[] = {"ffmpeg", "-i", videoFileToCompress.getAbsolutePath(), "-strict", "experimental", 
 				    							"-acodec", "aac", compressedVideoFile.getAbsolutePath()};
 				    	Log.d("MainActivity SocketServerThread Run","Calling ffmpegWrapper");
 				    	int ffmpegWrapperreturnCode = FfmpegJNIWrapper.call_ffmpegWrapper(this.ctx, argv);
 				    	Log.d("MainActivity SocketServerThread Run","ffmpegWrapperreturnCode: " + ffmpegWrapperreturnCode);
 	                    
-	                    //Send the compressed file back over the socket
+				    	//Stop the progress monitor task
+		    			MainActivity.this.runOnUiThread(new Runnable() {
+		    	    	    @Override
+	    	    			public void run() {
+		    	    	    	compressingProgressTask.cancel(true);
+	    	    			}
+		        		});
+				    	
+				    	//Update status to show sending file back
+		    			final long compressedFileSize = compressedVideoFile.length();
 		    			MainActivity.this.runOnUiThread(new Runnable() {
 		    				@Override
 	    	    			public void run() {
@@ -298,10 +330,15 @@ public class MainActivity extends ActionBarActivity {
 	        	    	        AnimationDrawable frameAnimation = (AnimationDrawable) statusBox
 	        	    	                .getBackground();
 	        	    	        frameAnimation.start();
+	        	    	        
+	        	    	        //Log the total compress file size
+	    					    String compFileSizeString = new DecimalFormat("0.00").format(compressedFileSize/1000000.0);
+	    					    loglnToScreen("Compressed file size: " + compressedFileSize + " (" + compFileSizeString + "MB)");
 	    	    			}
 	        			});
 		    			loglnToScreen("State: " + getResources().getString(R.string.state_sending_compressed_video));
 		    			
+		    			//Send the compressed file back over the socket
 		    			//First send the file size
 		    			Log.d("MainActivity SocketServerThread Run","Sending compessed file size back");
 					    compressedVideofileIS = new FileInputStream(compressedVideoFile);
@@ -419,4 +456,23 @@ public class MainActivity extends ActionBarActivity {
 		});
     	
     }
+
+	@Override
+	public void onCompressingProgressFinished(Void params) {
+		// No need to do anything here
+		
+	}
+
+	@Override
+	public void onCompressingPorgressTaskUpdate(Long compressingFileSize) {
+		//Display the compression file size
+		
+		//Update the compressing file size
+		Log.d("MainACtivity","onCompressingPorgressTaskUpdate");
+		
+    	TextView progressMessageTextView = (TextView) (TextView)findViewById(R.id.progress_textview);
+    	String vidFileSizeString = new DecimalFormat("0.00").format(compressingFileSize/1000000.0);
+    	progressMessageTextView.setText(vidFileSizeString + " MB");
+		
+	}
 }

@@ -253,7 +253,7 @@ int id action_context_bar 0x7f07001d
 int id action_menu_divider 0x7f070016
 int id action_menu_presenter 0x7f070017
 int id action_mode_close_button 0x7f070024
-int id action_settings 0x7f070045
+int id action_settings 0x7f070046
 int id activity_chooser_view_content 0x7f070025
 int id always 0x7f07000b
 int id beginning 0x7f070011
@@ -277,14 +277,15 @@ int id ip_address_label_textview 0x7f07003d
 int id ip_info_area 0x7f07003c
 int id listMode 0x7f070001
 int id list_item 0x7f070029
-int id log_area 0x7f070043
-int id log_scroll_text_view 0x7f070044
+int id log_area 0x7f070044
+int id log_scroll_text_view 0x7f070045
 int id middle 0x7f070012
 int id never 0x7f070009
 int id none 0x7f070010
 int id normal 0x7f070000
 int id progress_circular 0x7f070018
 int id progress_horizontal 0x7f070019
+int id progress_textview 0x7f070043
 int id radio 0x7f07002f
 int id search_badge 0x7f070032
 int id search_bar 0x7f070031
