@@ -188,7 +188,7 @@ public class MainActivity extends ActionBarActivity implements CompressingProgre
 					    videoToCompressBOS = null;
 					    
 						try {
-							//Create the file and the steams to enable us write to it. First check if a temp video file already exists 
+							//Create the file and the streams to enable us write to it. First check if a temp video file already exists 
 							//and if so delete it - we don't want more than one at any given time.
 							videoFileToCompress = new File(Environment.getExternalStorageDirectory(), "TempVideoToCompress.mp4");
 							if(videoFileToCompress.exists()) {
